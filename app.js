@@ -1,8 +1,8 @@
 const express = require('express');
 const app = express();
 const User = require('./models/userModel');
- // Kullanıcı modelini doğru şekilde getiriyoruz
-const sequelize = require('./models/sequelize'); // Sequelize bağlantısını getir
+const sequelize = require('./models/sequelize');
+const bcrypt = require('bcrypt');
 
 app.use(express.json()); // JSON verileri almak için
 
@@ -17,6 +17,48 @@ app.get('/users', async (req, res) => {
     res.status(500).json({ error: 'Veritabanından veri çekilemedi' });
   }
 });
+
+// Veritabanı tablolarını senkronize etme
+sequelize.sync({ force: false })  // force: true olursa tabloyu sıfırlar
+  .then(() => {
+    console.log('Veritabanı senkronize edildi');
+  })
+  .catch(err => {
+    console.error('Veritabanı senkronize edilemedi:', err);
+  });
+
+// Yeni bir kullanıcı ekleme
+app.post('/users', async (req, res) => {
+  try {
+    const hashedPassword = await bcrypt.hash(req.body.password, 10); // Şifreyi hashle
+    const newUser = await User.create({
+      username: req.body.username,
+      email: req.body.email,
+      password: hashedPassword // Hashlenmiş şifreyi veritabanına kaydet
+    });
+    res.status(201).json(newUser);
+  } catch (err) {
+    console.error('Kullanıcı eklenemedi:', err);
+    res.status(500).json({ error: 'Kullanıcı eklenemedi' });
+  }
+});
+
+// Belirli bir kullanıcıyı silme
+app.delete('/users/:id', async (req, res) => {
+  try {
+    const user = await User.findByPk(req.params.id);  // ID'ye göre kullanıcıyı bul
+    if (!user) {
+      return res.status(404).json({ error: 'Kullanıcı bulunamadı' });
+    }
+    
+    await user.destroy();  // Kullanıcıyı sil
+    res.status(200).json({ message: 'Kullanıcı başarıyla silindi' });
+  } catch (err) {
+    console.error('Kullanıcı silme hatası:', err);
+    res.status(500).json({ error: 'Kullanıcı silinemedi' });
+  }
+});
+
 
 const port = 20002;
 app.listen(port, () => {
