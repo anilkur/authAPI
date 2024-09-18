@@ -16,6 +16,7 @@ app.use('/auth', authRoutes);
 app.get('/users', authMiddleware, async (req, res) => {
   try {
     const users = await User.findAll();  // Veritabanındaki tüm kullanıcıları çek
+
     res.status(200).json(users);  // JSON formatında döndür
   } catch (err) {
     console.error('Veritabanından veri çekme hatası:', err);
@@ -32,8 +33,25 @@ sequelize.sync({ force: false })  // force: true olursa tabloyu sıfırlar
     console.error('Veritabanı senkronize edilemedi:', err);
   });
 
-// Belirli bir kullanıcıyı silme (JWT doğrulaması ekledik)
-app.delete('/users/:id', authMiddleware, async (req, res) => {
+// Yeni bir kullanıcı ekleme
+app.post('/users', async (req, res) => {
+  try {
+    const hashedPassword = await bcrypt.hash(req.body.password, 10); // Şifreyi hashle
+    const newUser = await User.create({
+      username: req.body.username,
+      email: req.body.email,
+      password: hashedPassword // Hashlenmiş şifreyi veritabanına kaydet
+    });
+    res.status(201).json(newUser);
+  } catch (err) {
+    console.error('Kullanıcı eklenemedi:', err);
+    res.status(500).json({ error: 'Kullanıcı eklenemedi' });
+  }
+});
+
+// Belirli bir kullanıcıyı silme
+app.delete('/users/:id', async (req, res) => {
+
   try {
     const user = await User.findByPk(req.params.id);  // ID'ye göre kullanıcıyı bul
     if (!user) {
@@ -47,6 +65,7 @@ app.delete('/users/:id', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Kullanıcı silinemedi' });
   }
 });
+
 
 const port = 20002;
 app.listen(port, () => {

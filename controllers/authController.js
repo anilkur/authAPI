@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/userModel'); // Kullanıcı modeli
 const config = require('../config'); // JWT config dosyası
 
+
 // Signup işlemi
 exports.signup = async (req, res) => {
   const { username, email, password } = req.body;
